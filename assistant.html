@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tıbbi Asistan Chatbot</title>
+    <!-- Markdown parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            line-height: 1.6;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.bot h1, .message.bot h2, .message.bot h3, 
+        .message.bot h4, .message.bot h5, .message.bot h6 {
+            margin: 10px 0 8px 0;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .message.bot h1 { font-size: 1.3em; }
+        .message.bot h2 { font-size: 1.2em; }
+        .message.bot h3 { font-size: 1.1em; }
+
+        .message.bot p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .message.bot ul, .message.bot ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .message.bot li {
+            margin: 4px 0;
+        }
+
+        .message.bot strong {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .message.bot em {
+            font-style: italic;
+            color: #34495e;
+        }
+
+        .message.bot code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }
+
+        .message.bot pre {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message.bot blockquote {
+            border-left: 4px solid #667eea;
+            background: #f8f9ff;
+            padding: 10px 15px;
+            margin: 8px 0;
+            font-style: italic;
+        }
+
+        .message.bot table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .message.bot table th,
+        .message.bot table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .message.bot table th {
+            background: #f2f3f4;
+            font-weight: 600;
+        }
+
+        .message.bot.follow-up {
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            border: 1px solid #f0ad4e;
+            margin-top: 5px;
+        }
+
+        .message.bot.follow-up::before {
+            display: none; /* CSS'teki emoji'yi kaldır çünkü JS'te ekliyoruz */
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 18px;
+            padding: 15px 20px;
+            max-width: 80px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            resize: none;
+            font-family: inherit;
+            min-height: 50px;
+            max-height: 120px;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, opacity 0.3s;
+            font-size: 18px;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            border: 1px solid #ff6b6b;
+            color: #721c24;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                width: 95%;
+                height: 95vh;
+                border-radius: 15px;
+            }
+
+            .message {
+                max-width: 85%;
+            }
+
+            .chat-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🏥 Tıbbi Asistan</h1>
+            <p>Sağlık sorularınız için buradayım...</p>
+            <div class="status-indicator status-online" id="statusIndicator">
+                ● Çevrimiçi
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                Merhaba! Ben tıbbi asistanınızım. Sağlık ile ilgili sorularınızı sorabilirsiniz. Size nasıl yardımcı olabilirim?
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Sağlık sorunuzu buraya yazın..."
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+
+        // Markdown parser'ını yapılandır
+        marked.setOptions({
+            breaks: true,        // \n'leri <br> yap
+            gfm: true,          // GitHub Flavored Markdown
+            sanitize: false,    // HTML'e izin ver (güvenli içerik için)
+            smartLists: true,   // Akıllı liste formatlaması
+            smartypants: true   // Akıllı punctuation
+        });
+
+        let isLoading = false;
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send message on Enter (Shift+Enter for new line)
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function addMessage(content, type = 'bot', isFollowUp = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            if (isFollowUp) {
+                messageDiv.className += ' follow-up';
+            }
+            
+            if (type === 'bot' || type === 'bot error-message') {
+                // Bot mesajları için markdown parse et
+                if (isFollowUp) {
+                    // Follow-up mesajları için emoji ekle
+                    messageDiv.innerHTML = `<strong>💡 Takip Sorusu:</strong> ${marked.parse(content)}`;
+                } else if (type === 'bot error-message') {
+                    // Hata mesajları için markdown parse etme
+                    messageDiv.textContent = content;
+                } else {
+                    // Normal bot yanıtları için markdown parse et
+                    messageDiv.innerHTML = marked.parse(content);
+                }
+            } else {
+                // Kullanıcı mesajları için sadece text
+                messageDiv.textContent = content;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            sendBtn.disabled = loading;
+            chatInput.disabled = loading;
+            
+            if (loading) {
+                addTypingIndicator();
+            } else {
+                removeTypingIndicator();
+            }
+        }
+
+        function updateConnectionStatus(online) {
+            if (online) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusIndicator.textContent = '● Çevrimiçi';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusIndicator.textContent = '● Çevrimdışı';
+            }
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || isLoading) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            setLoading(true);
+
+            try {
+                console.log('Sending request to:', `${API_BASE_URL}/ask`);
+                console.log('Request data:', { user_query: message });
+                
+                const response = await fetch(`${API_BASE_URL}/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_query: message })
+                });
+
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                setLoading(false);
+                updateConnectionStatus(true);
+
+                // Add main response
+                if (data.generated_answer) {
+                    addMessage(data.generated_answer, 'bot');
+                }
+
+                // Add follow-up question if available
+                if (data.follow_up) {
+                    setTimeout(() => {
+                        addMessage(data.follow_up, 'bot', true);
+                    }, 500);
+                }
+
+            } catch (error) {
+                setLoading(false);
+                updateConnectionStatus(false);
+                
+                console.error('Detailed Error:', error);
+                
+                let errorMsg = error.message;
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMsg = 'Backend sunucusuna bağlanılamıyor. Sunucunun çalıştığından emin olun (localhost:8000)';
+                }
+                
+                addMessage(
+                    `❌ Hata: ${errorMsg}`, 
+                    'bot error-message'
+                );
+            }
+        }
+
+        // Check connection on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_query: "test" })
+                });
+                updateConnectionStatus(response.ok);
+            } catch (error) {
+                updateConnectionStatus(false);
+            }
+        });
+    </script>
+</body>
+</html>
