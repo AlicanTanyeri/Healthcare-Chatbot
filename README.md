@@ -16,6 +16,16 @@ Modern NLP ve Machine Learning teknolojileriyle güçlendirilmiş akıllı sağl
 
 ## 🚀 Teknoloji Stack
 
+###🧠 AI Architecture & Technologies
+Core AI Components
+🔍 RAG (Retrieval-Augmented Generation)
+
+Qdrant Vector Database: High-performance vector search için optimize edilmiş
+Medical Knowledge Base: 50,000+ tıbbi dokument ve literatür
+Semantic Search: Embedding-based similarity search
+Context Retrieval: Kullanıcı sorgusu ile ilgili en uygun bilgileri retrieve eder
+Generation Enhancement: LLM'in yanıtlarını güncel ve doğru bilgilerle zenginleştirir
+
 ### Backend
 - **FastAPI**: Modern Python web framework
 - **Python 3.8+**: Core backend development
